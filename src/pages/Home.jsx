@@ -1,50 +1,129 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import CarCard from '../components/CarCard';
 import FilterPanel from '../components/FilterPanel';
 
-const API_KEY = 'Vnvlq7NL130mA1AYKG1VJQ==lGiwuTmoUJt0khX5';
+const API_URL = 'https://run.mocky.io/v3/bf704a66-1ca3-4f10-84f6-7e05c6d0694b';
 
 const Home = () => {
     const [filters, setFilters] = useState({ brand: '', fuelType: '' });
     const [cars, setCars] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const carsPerPage = 10;
 
     const fetchCars = async () => {
         setLoading(true);
-        const response = await fetch(`https://api.api-ninjas.com/v1/cars?model=${filters.brand}`, {
-            headers: {
-                'X-Api-Key': API_KEY
+
+        try {
+            const response = await fetch(API_URL);
+            const data = await response.json();
+
+            let filteredCars = data;
+
+            if (filters.brand) {
+                filteredCars = filteredCars.filter(car =>
+                    car.brand.toLowerCase().includes(filters.brand.toLowerCase())
+                );
             }
-        });
-        const data = await response.json();
-        setCars(data);
+
+            if (filters.fuelType) {
+                filteredCars = filteredCars.filter(car =>
+                    car.fuelType.toLowerCase().includes(filters.fuelType.toLowerCase())
+                );
+            }
+
+            if (filters.minPrice) {
+                filteredCars = filteredCars.filter((car) =>
+                    car.price >= Number(filters.minPrice)
+                );
+            }
+
+            if (filters.maxPrice) {
+                filteredCars = filteredCars.filter((car) =>
+                    car.price <= Number(filters.maxPrice)
+                );
+            }
+
+            setCars(filteredCars);
+            setCurrentPage(1);
+        } catch (err) {
+            console.error('Failed to fetch cars:', err);
+            setCars([]);
+        }
+
         setLoading(false);
     };
 
     useEffect(() => {
-        if (filters.brand) fetchCars();
-    }, [filters.brand]);
+        fetchCars();
+    }, [filters]);
+
+    const indexOfLastCar = currentPage * carsPerPage;
+    const indexOfFirstCar = indexOfLastCar - carsPerPage;
+    const currentCars = cars.slice(indexOfFirstCar, indexOfLastCar);
+    const totalPages = Math.ceil(cars.length / carsPerPage);
+
+    const nextPage = () => {
+        if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+    };
+
+    const prevPage = () => {
+        if (currentPage > 1) setCurrentPage(currentPage - 1);
+    };
 
     return (
         <div className="p-4">
-            <h1 className="text-2xl font-bold mb-4">Car Finder (API)</h1>
+            <h1 className="text-2xl font-bold mb-4">🚗 Car Finder (Mock API)</h1>
             <FilterPanel filters={filters} setFilters={setFilters} />
+
             {loading ? (
-                <p>Loading...</p>
+                <p>Loading cars...</p>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {cars.map((car, index) => (
-                        <CarCard key={index} car={{
-                            id: index,
-                            name: `${car.make} ${car.model}`,
-                            brand: car.make,
-                            price: car.price || 20000,
-                            fuelType: car.fuel_type || "Unknown",
-                            seatingCapacity: car.seats || "N/A",
-                            image: "/images/default-car.jpg"
-                        }} onWishlist={() => {}} />
-                    ))}
-                </div>
+                <>
+                    {currentCars.length === 0 ? (
+                        <p className="text-red-500">No cars found.</p>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            {currentCars.map(car => (
+                                <CarCard
+                                    key={car.id}
+                                    car={{
+                                        id: car.id,
+                                        name: car.name,
+                                        brand: car.brand,
+                                        price: car.price,
+                                        fuelType: car.fuelType,
+                                        seatingCapacity: car.seatingCapacity,
+                                    }}
+                                    onWishlist={() => {}}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Pagination */}
+                    {cars.length > carsPerPage && (
+                        <div className="flex justify-center mt-6 space-x-4">
+                            <button
+                                onClick={prevPage}
+                                disabled={currentPage === 1}
+                                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                            >
+                                ⬅ Prev
+                            </button>
+                            <span className="self-center font-semibold">
+                Page {currentPage} of {totalPages}
+              </span>
+                            <button
+                                onClick={nextPage}
+                                disabled={currentPage === totalPages}
+                                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                            >
+                                Next ➡
+                            </button>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

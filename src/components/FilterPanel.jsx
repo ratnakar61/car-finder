@@ -6,7 +6,7 @@ const FilterPanel = ({ filters, setFilters }) => {
             <input
                 type="text"
                 placeholder="Brand"
-                className="border p-2 rounded"
+                className="border p-2 rounded bg-white"
                 value={filters.brand}
                 onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
             />
